@@ -5,6 +5,7 @@ import uploadOnCloudinary from '../utils/cloudinary.js'
 import ApiResponse from '../utils/ApiResponse.js'
 import { verifyJWT } from "../middlewares/auth.middleware.js";
 import jwt from 'jsonwebtoken'
+import mongoose from "mongoose";
 
 const genrateAcessAndRefreshToken = async(userId)=>{
   const user=await User.findById(userId);
@@ -347,6 +348,59 @@ const getUserChannelProfile= asyncHandler(async(req,res)=>{
   .json(new ApiResponse(200,channel[0],"User channel fetched successfully"))
 })
 
+const getWatchHistory = asyncHandler(async(req,res)=>{
+const user = await User.aggregate([
+  {
+    $match:{
+      _id: new mongoose.Types.ObjectId.createFromTime(req.user._id)  // check this is working or not 
+    }
+  },
+  {
+   $lookup:{
+    from:"videos",
+    localField:"watchHistory",
+    foreignField:"_id",
+    as:"watchHistory",
+    pipeline:[
+      {
+        $lookup:{
+          from:"users",
+          localField: "owner",
+          foreignField: "_id",
+          as: "owner",
+          pipeline:[
+            {
+              $project:{
+                username:1,
+                avatar:1,
+                fullname:1,
+              }
+            }
+          ]
+        }
+      },
+      {
+          $addFields:{
+              owner:{
+                  $first: "$owner"
+              }
+          }
+      }
+    ]
+   }
+  }
+])
+return res
+    .status(200)
+    .json(
+        new ApiResponse(
+            200,
+            user[0].watchHistory,
+            "Watch history fetched successfully"
+        )
+    )
+})
+
 export  {
   registerUser,
   loginUser,
@@ -358,4 +412,5 @@ export  {
   updateUserAvatar,
   updateUserCoverImage,
   getUserChannelProfile,
+  getWatchHistory
 }
