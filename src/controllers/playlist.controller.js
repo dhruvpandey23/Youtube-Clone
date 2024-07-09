@@ -7,6 +7,19 @@ import {asyncHandler} from "../utils/asyncHandler.js"
 
 const createPlaylist = asyncHandler(async (req, res) => {
     const {name, description} = req.body
+    const user = req.user?._id
+    if(!user) throw new ApiError(404,"Login first then you will create playlist");
+    if([name,description].some((field)=>field?.trim()===""))
+        throw new ApiError(401,"Enter Name and description in the playlist");
+    const playlist = await Playlist.create({
+        name,
+        description,
+        owner:user
+    })
+
+    return res
+    .status(201)
+    .json(new ApiResponse(201,playlist,"Playlist is created"))
 
     //TODO: create playlist
 })
